@@ -1,56 +1,59 @@
-import { transformGcEventParams, addConversationReply, getConversationTransports } from '@getcourse/sdk'
-import { provideUser } from '@app/auth'
-import { Heap } from '@app/heap'
+import {
+  transformGcEventParams,
+  addConversationReply,
+  getConversationTransports,
+} from '@getcourse/sdk';
+import { provideUser } from '@app/auth';
+import { Heap } from '@app/heap';
+import { getGcUserData } from '@getcourse/sdk';
 
-export const staffApp = app.use(provideUser({ minRole: 'Staff' }))
+export const staffApp = app.use(provideUser({ minRole: 'Staff' }));
 
 // Таблица с автоответами, чтобы не повторяться
 export const AutoResponses = Heap.Table('auto_responses', {
-    conversationId: Heap.Number(),
+  conversationId: Heap.Number(),
 });
 
 const daysOfWeek = {
-    0: 'monday',
-    1: 'tuesday',
-    2: 'wednesday',
-    3: 'thursday', 
-    4: 'friday',
-    5: 'saturday',
-    6: 'sunday'
-}
+  0: 'monday',
+  1: 'tuesday',
+  2: 'wednesday',
+  3: 'thursday',
+  4: 'friday',
+  5: 'saturday',
+  6: 'sunday',
+};
 
 export const AutoResponseSettings = Heap.Table('auto_response_settings', {
-    responseText: Heap.String(),
-    responseTextVacation: Heap.Optional(Heap.String()), // если оставить пустым, будет использоваться responseText
-    is_enabled: Heap.Boolean(),
-    adminId: Heap.Number(), // ID админа, который будет "отвечать"
-    vacationDays: Heap.Object({
-        'monday': Heap.Boolean(),
-        'tuesday': Heap.Boolean(),
-        'wednesday': Heap.Boolean(),
-        'thursday': Heap.Boolean(),
-        'friday': Heap.Boolean(),
-        'saturday': Heap.Boolean(),
-        'sunday': Heap.Boolean(),
-    }, {
-        'monday': false,
-        'tuesday': false,
-        'wednesday': false,
-        'thursday': false,
-        'friday': false,
-        'saturday': true,
-        'sunday': true
-    })
-})
-
-
-
-
-
+  responseText: Heap.String(),
+  responseTextVacation: Heap.Optional(Heap.String()), // если оставить пустым, будет использоваться responseText
+  is_enabled: Heap.Boolean(),
+  adminId: Heap.Number(), // ID админа, который будет "отвечать"
+  vacationDays: Heap.Object(
+    {
+      monday: Heap.Boolean(),
+      tuesday: Heap.Boolean(),
+      wednesday: Heap.Boolean(),
+      thursday: Heap.Boolean(),
+      friday: Heap.Boolean(),
+      saturday: Heap.Boolean(),
+      sunday: Heap.Boolean(),
+    },
+    {
+      monday: false,
+      tuesday: false,
+      wednesday: false,
+      thursday: false,
+      friday: false,
+      saturday: true,
+      sunday: true,
+    }
+  ),
+});
 
 staffApp.html('/', async (ctx, req) => {
-    let config = await getConfig(ctx);
-    return `<!doctype html>
+  let config = await getConfig(ctx);
+  return `<!doctype html>
 <html lang="ru">
 <head>
   <meta charset="utf-8" />
@@ -97,7 +100,9 @@ staffApp.html('/', async (ctx, req) => {
         <div class="gc-col">
           <label for="gc-enabled">Автоответ</label>
           <div class="gc-switch" title="Включить/выключить автоответ">
-            <input id="gc-enabled-input" type="checkbox" ${(config.is_enabled) ? 'checked' : ''}/>
+            <input id="gc-enabled-input" type="checkbox" ${
+              config.is_enabled ? 'checked' : ''
+            }/>
             <label class="gc-switch-label" for="gc-enabled-input">
               <span class="gc-switch-knob" aria-hidden="true"></span>
             </label>
@@ -110,7 +115,9 @@ staffApp.html('/', async (ctx, req) => {
       <div class="gc-row">
         <div class="gc-col">
           <label for="gc-text">Текст автоответа (будни)</label>
-          <textarea id="gc-text" name="text" rows="8" placeholder="Например: Спасибо за обращение! Мы ответим в ближайшее рабочее время." >${(config.responseText) ? config.responseText : ''}</textarea>
+          <textarea id="gc-text" name="text" rows="8" placeholder="Например: Спасибо за обращение! Мы ответим в ближайшее рабочее время." >${
+            config.responseText ? config.responseText : ''
+          }</textarea>
           <div class="gc-note">Обязательное поле.</div>
         </div>
       </div>
@@ -118,7 +125,9 @@ staffApp.html('/', async (ctx, req) => {
       <div class="gc-row">
         <div class="gc-col">
           <label for="gc-text-vac">Текст автоответа (выходные)</label>
-          <textarea id="gc-text-vac" name="text_vacation" rows="8" placeholder="Оставьте пустым, если хотите использовать будний текст">${(config.responseTextVacation) ? config.responseTextVacation : ''}</textarea>
+          <textarea id="gc-text-vac" name="text_vacation" rows="8" placeholder="Оставьте пустым, если хотите использовать будний текст">${
+            config.responseTextVacation ? config.responseTextVacation : ''
+          }</textarea>
           <div class="gc-note">Можно оставить пустым — тогда применяется будний текст.</div>
         </div>
       </div>
@@ -127,13 +136,27 @@ staffApp.html('/', async (ctx, req) => {
         <div class="gc-col">
           <label>Выходные дни</label>
           <div class="gc-weekdays">
-            <label><input type="checkbox" data-day="0" ${(config.vacationDays.monday) ? 'checked' : ''}> Пн</label>
-            <label><input type="checkbox" data-day="1" ${(config.vacationDays.tuesday) ? 'checked' : ''}> Вт</label>
-            <label><input type="checkbox" data-day="2" ${(config.vacationDays.wednesday) ? 'checked' : ''}> Ср</label>
-            <label><input type="checkbox" data-day="3" ${(config.vacationDays.thursday) ? 'checked' : ''}> Чт</label>
-            <label><input type="checkbox" data-day="4" ${(config.vacationDays.friday) ? 'checked' : ''}> Пт</label>
-            <label><input type="checkbox" data-day="5" ${(config.vacationDays.saturday) ? 'checked' : ''}> Сб</label>
-            <label><input type="checkbox" data-day="6" ${(config.vacationDays.sunday) ? 'checked' : ''}> Вс</label>
+            <label><input type="checkbox" data-day="0" ${
+              config.vacationDays.monday ? 'checked' : ''
+            }> Пн</label>
+            <label><input type="checkbox" data-day="1" ${
+              config.vacationDays.tuesday ? 'checked' : ''
+            }> Вт</label>
+            <label><input type="checkbox" data-day="2" ${
+              config.vacationDays.wednesday ? 'checked' : ''
+            }> Ср</label>
+            <label><input type="checkbox" data-day="3" ${
+              config.vacationDays.thursday ? 'checked' : ''
+            }> Чт</label>
+            <label><input type="checkbox" data-day="4" ${
+              config.vacationDays.friday ? 'checked' : ''
+            }> Пт</label>
+            <label><input type="checkbox" data-day="5" ${
+              config.vacationDays.saturday ? 'checked' : ''
+            }> Сб</label>
+            <label><input type="checkbox" data-day="6" ${
+              config.vacationDays.sunday ? 'checked' : ''
+            }> Вс</label>
           </div>
         </div>
       </div>
@@ -207,7 +230,9 @@ staffApp.html('/', async (ctx, req) => {
               adminSelect.appendChild(opt);
             });
             let configAdminId = ${config.adminId};
-            if (adminSelect.innerHTML.indexOf('value="' + ${config.adminId} + '"') > -1) {
+            if (adminSelect.innerHTML.indexOf('value="' + ${
+              config.adminId
+            } + '"') > -1) {
                 adminSelect.value = ${config.adminId};
             }
           } else {
@@ -331,131 +356,160 @@ staffApp.html('/', async (ctx, req) => {
 
 
     `;
-})
+});
 
-export const appPostAutoresponseSettingsRoute = staffApp.post('/', async (ctx, req) => {
+export const appPostAutoresponseSettingsRoute = staffApp.post(
+  '/',
+  async (ctx, req) => {
     let form = req.body;
-    if (!form) { return { status: false } }
-    
+    if (!form) {
+      return { status: false };
+    }
+    ctx.account.log(`form posted: ${JSON.stringify(form)}`);
     let { is_enabled, admin_id, text, text_vacation, weekends } = req.body;
     weekends = JSON.parse(weekends);
-    
 
-   
+    ctx.account.log(`form days: ${weekends['0']}`);
     try {
-        config = await AutoResponseSettings.updateSingleton(ctx, {
-            responseText: text,
-            responseTextVacation: text_vacation,
-            is_enabled: (is_enabled === 'true'),
-            adminId: Number(admin_id),
-            vacationDays: {
-                'monday': Boolean(weekends['0']),
-                'tuesday': Boolean(weekends['1']),
-                'wednesday': Boolean(weekends['2']),
-                'thursday': Boolean(weekends['3']),
-                'friday': Boolean(weekends['4']),
-                'saturday': Boolean(weekends['5']),
-                'sunday': Boolean(weekends['6']),
-            }
-        })
-        
+      config = await AutoResponseSettings.updateSingleton(ctx, {
+        responseText: text,
+        responseTextVacation: text_vacation,
+        is_enabled: is_enabled === 'true',
+        adminId: Number(admin_id),
+        vacationDays: {
+          monday: Boolean(weekends['0']),
+          tuesday: Boolean(weekends['1']),
+          wednesday: Boolean(weekends['2']),
+          thursday: Boolean(weekends['3']),
+          friday: Boolean(weekends['4']),
+          saturday: Boolean(weekends['5']),
+          sunday: Boolean(weekends['6']),
+        },
+      });
+      ctx.account.log(`Новый конфиг: ${JSON.stringify(config)}`);
     } catch (err) {
-       
+      ctx.account.log(`autoresponse settings update error: ${err}`);
     }
-    return { status: true }
-})
+    return { status: true };
+  }
+);
 
-app.accountHook('metric-event-event://getcourse/conversation/addedMessage', async (ctx, params) => {
 
+async function getConfig(ctx) {
+  let config = await AutoResponseSettings.getSingleton(ctx);
+
+  if (!config.responseText) {
+    config = await AutoResponseSettings.updateSingleton(ctx, {
+      responseText:
+        'Добрый день! Ваше сообщение принято, наши сотрудники вам скоро ответят.\n\nЭто техническое сообщение, отвечать не нужно.',
+      responseTextVacation: '',
+      is_enabled: false,
+      adminId: 0,
+      vacationDays: {
+        monday: false,
+        tuesday: false,
+        wednesday: false,
+        thursday: false,
+        friday: false,
+        saturday: true,
+        sunday: true,
+      },
+    });
+  }
+
+  return config;
+}
+
+import { showContextMenu } from '@app/ui';
+app.apiCall('/settings-action', (ctx) => {
+  return showContextMenu([
+    {
+      title: 'Настройки',
+      onClick: ctx.account.navigate(appPostAutoresponseSettingsRoute.url(), {
+        openInExternalApp: true,
+      }),
+    },
+  ]);
+});
+app.accountHook(
+  'metric-event-event://getcourse/conversation/addedMessage',
+  async (ctx, params) => {
     let config = await getConfig(ctx);
     // ничего не делать, если в конфиге автоответ выключен или не задан админ
-    if(!config.is_enabled || config.adminId == 0){
-        return;
+    if (!config.is_enabled || config.adminId == 0) {
+      return;
     }
 
-    const event = transformGcEventParams(ctx, params.event)
+    const event = transformGcEventParams(ctx, params.event);
+    //ctx.account.log(`Message Event: \n\n ${JSON.stringify(event)}`)
+    let senderUserId = event.comment.user_id;
+    //ctx.account.log(`message incoming, obtaining user info`);
+
+    let userInfo = await getGcUserData(ctx, { id: senderUserId });
+
+    //ctx.account.log(`userInfo: ${JSON.stringify(userInfo)}`);
+
+    if (['admin', 'teacher'].includes(userInfo.user.type)) {
+      return;
+    }
 
     let transports = await getConversationTransports(
-        ctx,
-        userId = event.user.gcId
-    )
+      ctx,
+      (senderUserId = event.user.gcId)
+    );
 
     const autoResponseInDB = await AutoResponses.findOneBy(ctx, {
-        conversationId: event.conversation.id,
-    })
+      conversationId: event.conversation.id,
+    });
 
     // ничего не делать, если в этой ветке автоответ уже был
     if (autoResponseInDB) {
-        return;
+      return;
     }
 
-    let transportsAvailable = transports.filter(function (item) {
-
+    let transportsAvailable = transports
+      .filter(function (item) {
         return item.is_enabled;
-    }).map(function (item) { return item.name; });
+      })
+      .map(function (item) {
+        return item.name;
+      });
 
-    
     let now = new Date();
     let nowDayOfWeek = now.getDay();
     let isVacation = config.vacationDays[daysOfWeek[nowDayOfWeek]];
-  
+    //ctx.account.log(`Выходной день? ${isVacation}, userInfo: ${JSON.stringify(userInfo)}`);
     let responseText = '';
-    if(isVacation) {
-        // если текста для выходных не задано, использовать текст для будней
-        if(config.responseTextVacation) {
-            responseText = config.responseTextVacation;
-        } else {
-            responseText = config.responseText;
-        }
-    } else {
+    if (isVacation) {
+      // если текста для выходных не задано, использовать текст для будней
+      if (config.responseTextVacation) {
+        responseText = config.responseTextVacation;
+      } else {
         responseText = config.responseText;
+      }
+    } else {
+      responseText = config.responseText;
+    }
+    if (responseText.includes('{conversation_id}')) {
+      responseText = responseText.replaceAll(
+        '{conversation_id}',
+        event.conversation.responsibility_id
+      );
     }
     await addConversationReply(
-        ctx = ctx, params = {
-            fromUserId: config.adminId,
-            conversationId: event.conversation.id,
-            text: responseText,
-            transports: transportsAvailable,
-            //  forceEmails?: boolean
-        }
-    )
+      (ctx = ctx),
+      (params = {
+        fromUserId: config.adminId,
+        conversationId: event.conversation.id,
+        text: responseText,
+        transports: transportsAvailable,
+        //  forceEmails?: boolean
+      })
+    );
 
     // записать попытку автоответа в БД чтобы не повторяться
     const newAutoResponseInDB = await AutoResponses.create(ctx, {
-        conversationId: event.conversation.id,
-    })
-
-})
-
-async function getConfig(ctx) {
-    let config = await AutoResponseSettings.getSingleton(ctx);
-
-    if (!(config.responseText)) {
-        config = await AutoResponseSettings.updateSingleton(ctx, {
-            responseText: 'Добрый день! Ваше сообщение принято, наши сотрудники вам скоро ответят.\n\nЭто техническое сообщение, отвечать не нужно.',
-            responseTextVacation: '',
-            is_enabled: false,
-            adminId: 0,
-            vacationDays: {
-                'monday': false,
-                'tuesday': false,
-                'wednesday': false,
-                'thursday': false,
-                'friday': false,
-                'saturday': true,
-                'sunday': true
-            }
-        })
-
-    }
-
-    return config;
-}
-
-import {showContextMenu} from '@app/ui'
-app.apiCall('/settings-action', (ctx) => {
-  return showContextMenu([{
-    title: 'Настройки',
-    onClick: ctx.account.navigate(appPostAutoresponseSettingsRoute.url(), {openInExternalApp: true})
-  }])
-})
+      conversationId: event.conversation.id,
+    });
+  }
+);
