@@ -476,7 +476,7 @@ app.accountHook(
       });
 
     let now = new Date();
-    let nowDayOfWeek = now.getDay();
+ let nowDayOfWeek = (now.getDay() + 6) % 7;    
     let isVacation = config.vacationDays[daysOfWeek[nowDayOfWeek]];
     //ctx.account.log(`Выходной день? ${isVacation}, userInfo: ${JSON.stringify(userInfo)}`);
     let responseText = '';
