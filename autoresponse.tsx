@@ -100,9 +100,8 @@ staffApp.html('/', async (ctx, req) => {
         <div class="gc-col">
           <label for="gc-enabled">Автоответ</label>
           <div class="gc-switch" title="Включить/выключить автоответ">
-            <input id="gc-enabled-input" type="checkbox" ${
-              config.is_enabled ? 'checked' : ''
-            }/>
+            <input id="gc-enabled-input" type="checkbox" ${config.is_enabled ? 'checked' : ''
+    }/>
             <label class="gc-switch-label" for="gc-enabled-input">
               <span class="gc-switch-knob" aria-hidden="true"></span>
             </label>
@@ -115,9 +114,8 @@ staffApp.html('/', async (ctx, req) => {
       <div class="gc-row">
         <div class="gc-col">
           <label for="gc-text">Текст автоответа (будни)</label>
-          <textarea id="gc-text" name="text" rows="8" placeholder="Например: Спасибо за обращение! Мы ответим в ближайшее рабочее время." >${
-            config.responseText ? config.responseText : ''
-          }</textarea>
+          <textarea id="gc-text" name="text" rows="8" placeholder="Например: Спасибо за обращение! Мы ответим в ближайшее рабочее время." >${config.responseText ? config.responseText : ''
+    }</textarea>
           <div class="gc-note">Обязательное поле.</div>
         </div>
       </div>
@@ -125,9 +123,8 @@ staffApp.html('/', async (ctx, req) => {
       <div class="gc-row">
         <div class="gc-col">
           <label for="gc-text-vac">Текст автоответа (выходные)</label>
-          <textarea id="gc-text-vac" name="text_vacation" rows="8" placeholder="Оставьте пустым, если хотите использовать будний текст">${
-            config.responseTextVacation ? config.responseTextVacation : ''
-          }</textarea>
+          <textarea id="gc-text-vac" name="text_vacation" rows="8" placeholder="Оставьте пустым, если хотите использовать будний текст">${config.responseTextVacation ? config.responseTextVacation : ''
+    }</textarea>
           <div class="gc-note">Можно оставить пустым — тогда применяется будний текст.</div>
         </div>
       </div>
@@ -136,27 +133,20 @@ staffApp.html('/', async (ctx, req) => {
         <div class="gc-col">
           <label>Выходные дни</label>
           <div class="gc-weekdays">
-            <label><input type="checkbox" data-day="0" ${
-              config.vacationDays.monday ? 'checked' : ''
-            }> Пн</label>
-            <label><input type="checkbox" data-day="1" ${
-              config.vacationDays.tuesday ? 'checked' : ''
-            }> Вт</label>
-            <label><input type="checkbox" data-day="2" ${
-              config.vacationDays.wednesday ? 'checked' : ''
-            }> Ср</label>
-            <label><input type="checkbox" data-day="3" ${
-              config.vacationDays.thursday ? 'checked' : ''
-            }> Чт</label>
-            <label><input type="checkbox" data-day="4" ${
-              config.vacationDays.friday ? 'checked' : ''
-            }> Пт</label>
-            <label><input type="checkbox" data-day="5" ${
-              config.vacationDays.saturday ? 'checked' : ''
-            }> Сб</label>
-            <label><input type="checkbox" data-day="6" ${
-              config.vacationDays.sunday ? 'checked' : ''
-            }> Вс</label>
+            <label><input type="checkbox" data-day="0" ${config.vacationDays.monday ? 'checked' : ''
+    }> Пн</label>
+            <label><input type="checkbox" data-day="1" ${config.vacationDays.tuesday ? 'checked' : ''
+    }> Вт</label>
+            <label><input type="checkbox" data-day="2" ${config.vacationDays.wednesday ? 'checked' : ''
+    }> Ср</label>
+            <label><input type="checkbox" data-day="3" ${config.vacationDays.thursday ? 'checked' : ''
+    }> Чт</label>
+            <label><input type="checkbox" data-day="4" ${config.vacationDays.friday ? 'checked' : ''
+    }> Пт</label>
+            <label><input type="checkbox" data-day="5" ${config.vacationDays.saturday ? 'checked' : ''
+    }> Сб</label>
+            <label><input type="checkbox" data-day="6" ${config.vacationDays.sunday ? 'checked' : ''
+    }> Вс</label>
           </div>
         </div>
       </div>
@@ -230,9 +220,8 @@ staffApp.html('/', async (ctx, req) => {
               adminSelect.appendChild(opt);
             });
             let configAdminId = ${config.adminId};
-            if (adminSelect.innerHTML.indexOf('value="' + ${
-              config.adminId
-            } + '"') > -1) {
+            if (adminSelect.innerHTML.indexOf('value="' + ${config.adminId
+    } + '"') > -1) {
                 adminSelect.value = ${config.adminId};
             }
           } else {
@@ -445,6 +434,22 @@ app.accountHook(
     let senderUserId = event.comment.user_id;
     //ctx.account.log(`message incoming, obtaining user info`);
 
+    const autoResponseInDB = await AutoResponses.findOneBy(ctx, {
+      conversationId: event.conversation.id,
+    });
+
+    // ничего не делать, если в этой ветке автоответ уже был
+    if (autoResponseInDB) {
+      return;
+    } else {
+
+      // записать попытку автоответа в БД чтобы не повторяться
+      // даже если отвечать сейчас не надо
+      const newAutoResponseInDB = await AutoResponses.create(ctx, {
+        conversationId: event.conversation.id,
+      });
+    }
+
     let userInfo = await getGcUserData(ctx, { id: senderUserId });
 
     //ctx.account.log(`userInfo: ${JSON.stringify(userInfo)}`);
@@ -458,14 +463,6 @@ app.accountHook(
       (senderUserId = event.user.gcId)
     );
 
-    const autoResponseInDB = await AutoResponses.findOneBy(ctx, {
-      conversationId: event.conversation.id,
-    });
-
-    // ничего не делать, если в этой ветке автоответ уже был
-    if (autoResponseInDB) {
-      return;
-    }
 
     let transportsAvailable = transports
       .filter(function (item) {
@@ -476,7 +473,7 @@ app.accountHook(
       });
 
     let now = new Date();
- let nowDayOfWeek = (now.getDay() + 6) % 7;    
+    let nowDayOfWeek = (now.getDay() + 6) % 7;
     let isVacation = config.vacationDays[daysOfWeek[nowDayOfWeek]];
     //ctx.account.log(`Выходной день? ${isVacation}, userInfo: ${JSON.stringify(userInfo)}`);
     let responseText = '';
@@ -507,9 +504,5 @@ app.accountHook(
       })
     );
 
-    // записать попытку автоответа в БД чтобы не повторяться
-    const newAutoResponseInDB = await AutoResponses.create(ctx, {
-      conversationId: event.conversation.id,
-    });
   }
 );
